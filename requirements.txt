@@ -1,7 +1,13 @@
+# 离线训练端
+mne
 numpy
 pandas
 scipy
-mne
 scikit-learn
 xgboost
 joblib
+
+# 实时 UI 如果后续改 Flask/FastAPI，可再添加：
+# flask
+# fastapi
+# uvicorn

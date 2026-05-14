@@ -1,0 +1,12 @@
+[
+  {
+    "subject_id": "day1",
+    "edf": "data/day1.edf",
+    "label": "data/day1.txt"
+  },
+  {
+    "subject_id": "day2",
+    "edf": "data/day2.edf",
+    "label": "data/day2.txt"
+  }
+]
