@@ -13,7 +13,7 @@ VSCode 友好版模型训练与对比脚本。
 推荐 VSCode 运行方式：
 - 先运行 01 脚本生成 features 文件夹；
 - 在 VSCode 终端运行：
-  python 02_train_compare_models_vscode.py --mode portable6 --context-mode causal
+  python 02_train_compare_models_vscode.py --mode dual2 --context-mode causal
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG: Dict[str, Any] = {
     "FEATURE_DIR": "features",
     "RESULT_DIR": "results",
-    "CHANNEL_MODE": "portable6",
+    "CHANNEL_MODE": "dual2",
     "WITHIN_TRAIN_RATIO": 0.7,
     "CALIBRATION_RATIO": 0.2,
     "STAGE_NAMES": ["W", "N1", "N2", "N3", "REM"],
@@ -466,7 +466,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="VSCode 友好版睡眠分期模型训练脚本")
     parser.add_argument("--feature-dir", default=CONFIG["FEATURE_DIR"], help="01 脚本生成的 features 文件夹")
     parser.add_argument("--result-dir", default=CONFIG["RESULT_DIR"], help="结果输出文件夹")
-    parser.add_argument("--mode", choices=["all32", "portable6"], default=CONFIG["CHANNEL_MODE"], help="通道模式，必须和 01 脚本一致")
+    parser.add_argument("--mode", choices=["all32", "dual2"], default=CONFIG["CHANNEL_MODE"], help="通道模式，必须和 01 脚本一致")
     parser.add_argument("--context-mode", choices=["causal", "centered", "none"], default=CONFIG["CONTEXT_MODE"], help="时序上下文模式")
     parser.add_argument("--within-train-ratio", type=float, default=CONFIG["WITHIN_TRAIN_RATIO"], help="同被试时间切分训练比例")
     parser.add_argument("--calibration-ratio", type=float, default=CONFIG["CALIBRATION_RATIO"], help="个体化校准比例")

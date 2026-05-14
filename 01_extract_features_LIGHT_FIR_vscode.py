@@ -5,7 +5,7 @@ VSCode 友好版 EEG 特征提取脚本。
 
 功能：
 1. 读取 EDF 脑电文件和 TXT 睡眠分期标签；
-2. 支持 all32 / portable6 两种通道模式；
+2. 支持 all32 / dual2 两种通道模式；
 3. 支持自由控制处理长度；
 4. 使用 FIR 带通滤波、降采样、30 秒 epoch 切片；
 5. 提取时域、频域功率、Hjorth、Shannon entropy、Petrosian FD 等特征；
@@ -14,13 +14,16 @@ VSCode 友好版 EEG 特征提取脚本。
 推荐 VSCode 运行方式：
 - 把 EDF 和 TXT 放到本脚本同级目录下的 data 文件夹；
 - 在 VSCode 终端运行：
-  python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode portable6 --max-epochs 120
+  python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --max-epochs 120
+
+  默认 dual2 选择 C3 和 O1。也可以自定义两个通道，例如：
+  python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --dual2-channels C4 O2 --max-epochs 120
 
 也可以批量运行：
 - 复制 subjects_template.json 为 subjects.json；
 - 填写多个被试；
 - 运行：
-  python 01_extract_features_LIGHT_FIR_vscode.py --subjects-file subjects.json --mode portable6 --max-epochs 120
+  python 01_extract_features_LIGHT_FIR_vscode.py --subjects-file subjects.json --mode dual2 --max-epochs 120
 """
 
 from __future__ import annotations
@@ -49,8 +52,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 # 默认配置。VSCode 里也可以直接改这里。
 # =========================
 CONFIG: Dict[str, Any] = {
-    # all32：尽量选择 32 个 EEG 通道；portable6：F3/C3/O1/F4/C4/O2 六个通道。
-    "CHANNEL_MODE": "portable6",
+    # all32：尽量选择 32 个 EEG 通道；dual2：默认 C3 和 O1 两个通道，可通过 --dual2-channels 自定义。
+    "CHANNEL_MODE": "dual2",
 
     # 输出特征文件夹，默认是当前脚本所在目录下的 features。
     "OUTPUT_DIR": "features",
@@ -75,9 +78,12 @@ CONFIG: Dict[str, Any] = {
 
     # 120 = 前 60 分钟；240 = 前 120 分钟；None = 尽量处理整晚。
     "MAX_EPOCHS_PER_SUBJECT": 120,
+
+    # dual2 模式默认选用的两个通道。
+    "DUAL2_CHANNELS": ["C3", "O1"],
 }
 
-PORTABLE_6_CHANNELS = ["F3", "C3", "O1", "F4", "C4", "O2"]
+DUAL2_DEFAULT_CHANNELS = ["C3", "O1"]
 
 STANDARD_32_CHANNELS = [
     "FP1", "FP2",
@@ -128,32 +134,55 @@ def is_bad_non_eeg_channel(ch: str) -> bool:
     return any(k in u for k in bad_keywords)
 
 
-def pick_channels(raw: mne.io.BaseRaw, mode: str) -> List[str]:
-    """根据 all32 / portable6 选择 EEG 通道。"""
+def pick_channels(raw: mne.io.BaseRaw, mode: str, dual2_channels: Optional[Sequence[str]] = None) -> List[str]:
+    """根据 all32 / dual2 选择 EEG 通道。
+
+    dual2 模式下使用 dual2_channels 指定的两个通道，默认 C3 + O1。
+    """
     raw_names = list(raw.ch_names)
     norm_to_raw = {normalize_channel_name(ch): ch for ch in raw_names}
 
-    if mode == "portable6":
+    if mode == "dual2":
+        targets = list(dual2_channels) if dual2_channels else list(DUAL2_DEFAULT_CHANNELS)
+        if len(targets) != 2:
+            raise ValueError(
+                f"dual2 模式必须指定两个通道，但收到 {len(targets)} 个：{targets}"
+            )
+
         selected: List[str] = []
-        for target in PORTABLE_6_CHANNELS:
+        missing: List[str] = []
+        for target in targets:
             target_norm = normalize_channel_name(target)
             matched = norm_to_raw.get(target_norm)
+            if matched is None:
+                for raw_ch in raw_names:
+                    if target_norm == normalize_channel_name(raw_ch):
+                        matched = raw_ch
+                        break
             if matched is None:
                 for raw_ch in raw_names:
                     if target_norm in normalize_channel_name(raw_ch):
                         matched = raw_ch
                         break
-            if matched is not None and matched not in selected:
+            if matched is None:
+                missing.append(target)
+            elif matched not in selected:
                 selected.append(matched)
 
-        if len(selected) < 6:
+        if missing:
             raise ValueError(
-                "portable6 模式需要 F3/C3/O1/F4/C4/O2 六个通道，"
-                f"但只找到 {len(selected)} 个：{selected}\n"
+                f"dual2 模式找不到以下通道：{missing}\n"
+                f"目标通道：{targets}\n"
                 f"EDF 通道名如下：{raw_names}\n"
-                "解决方法：1）先检查 EDF 通道名；2）改用 all32；3）在代码 PORTABLE_6_CHANNELS 中改成你的实际通道名。"
+                "解决方法：1）确认 EDF 通道名拼写；2）通过 --dual2-channels 指定实际存在的两个通道。"
             )
-        return selected[:6]
+        if len(selected) != 2:
+            raise ValueError(
+                f"dual2 模式需要正好 2 个通道，但匹配到 {len(selected)} 个：{selected}\n"
+                f"目标通道：{targets}\n"
+                f"EDF 通道名如下：{raw_names}"
+            )
+        return selected
 
     if mode == "all32":
         selected = []
@@ -183,11 +212,11 @@ def pick_channels(raw: mne.io.BaseRaw, mode: str) -> List[str]:
             raise ValueError(
                 f"all32 模式要求至少 32 个 EEG 通道，但只找到 {len(selected)} 个：{selected}\n"
                 f"EDF 全部通道名如下：{raw_names}\n"
-                "解决方法：1）确认 EDF 是否为多导数据；2）先使用 --mode portable6 跑通流程。"
+                "解决方法：1）确认 EDF 是否为多导数据；2）先使用 --mode dual2 跑通流程。"
             )
         return selected[:32]
 
-    raise ValueError("CHANNEL_MODE 只能是 all32 或 portable6")
+    raise ValueError("CHANNEL_MODE 只能是 all32 或 dual2")
 
 
 def load_custom_labels(txt_path: Path) -> np.ndarray:
@@ -319,6 +348,7 @@ def extract_features_from_edf(
     resample_freq: float,
     epoch_seconds: int,
     clip_uv: float,
+    dual2_channels: Optional[Sequence[str]] = None,
 ) -> None:
     """读取单个 EDF 和标签文件，完成预处理、切片、特征提取和保存。"""
     print("\n" + "=" * 90)
@@ -326,6 +356,8 @@ def extract_features_from_edf(
     print(f"EDF：{edf_path}")
     print(f"标签：{label_path}")
     print(f"模式：{channel_mode}")
+    if channel_mode == "dual2":
+        print(f"dual2 目标通道：{list(dual2_channels) if dual2_channels else list(DUAL2_DEFAULT_CHANNELS)}")
 
     if not edf_path.exists():
         raise FileNotFoundError(f"找不到 EDF 文件：{edf_path}")
@@ -347,7 +379,7 @@ def extract_features_from_edf(
 
     # 第一次只读头信息，便于检查通道，不加载整晚数据。
     temp_raw = mne.io.read_raw_edf(edf_path, preload=False, verbose="ERROR")
-    target_channels = pick_channels(temp_raw, mode=channel_mode)
+    target_channels = pick_channels(temp_raw, mode=channel_mode, dual2_channels=dual2_channels)
     print(f"✅ 选中通道数：{len(target_channels)}")
     print(f"✅ 选中通道：{target_channels}")
 
@@ -437,6 +469,10 @@ def extract_features_from_edf(
         "clip_uv": clip_uv,
         "label_meaning": {"0": "W", "1": "N1", "2": "N2", "3": "N3", "4": "REM"},
     }
+    if channel_mode == "dual2":
+        meta["dual2_target_channels"] = (
+            list(dual2_channels) if dual2_channels else list(DUAL2_DEFAULT_CHANNELS)
+        )
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
@@ -462,7 +498,7 @@ def load_subjects_from_file(subjects_file: Path) -> List[Dict[str, str]]:
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="VSCode 友好版 EEG 特征提取脚本")
-    parser.add_argument("--mode", choices=["all32", "portable6"], default=CONFIG["CHANNEL_MODE"], help="通道模式")
+    parser.add_argument("--mode", choices=["all32", "dual2"], default=CONFIG["CHANNEL_MODE"], help="通道模式")
     parser.add_argument("--output-dir", default=CONFIG["OUTPUT_DIR"], help="特征输出文件夹")
     parser.add_argument("--subject-id", default=None, help="单个被试 ID，例如 day1")
     parser.add_argument("--edf", default=None, help="单个 EDF 文件路径，例如 data/day1.edf")
@@ -474,6 +510,13 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--resample-freq", type=float, default=CONFIG["RESAMPLE_FREQ"], help="重采样频率")
     parser.add_argument("--epoch-seconds", type=int, default=CONFIG["EPOCH_SECONDS"], help="每个 epoch 秒数")
     parser.add_argument("--clip-uv", type=float, default=CONFIG["CLIP_UV"], help="振幅裁剪阈值，单位微伏")
+    parser.add_argument(
+        "--dual2-channels",
+        nargs=2,
+        default=list(CONFIG["DUAL2_CHANNELS"]),
+        metavar=("CH1", "CH2"),
+        help="dual2 模式选用的两个通道名，默认 C3 O1。例如：--dual2-channels C4 O2",
+    )
     return parser.parse_args(argv)
 
 
@@ -505,8 +548,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     max_epochs = parse_max_epochs(args.max_epochs)
     subjects = build_subjects(args)
 
+    dual2_channels = list(args.dual2_channels) if args.mode == "dual2" else None
+
     print("\n当前脚本目录：", PROJECT_ROOT)
     print("当前通道模式：", args.mode)
+    if args.mode == "dual2":
+        print("dual2 通道：", dual2_channels)
     print("输出目录：", output_dir)
     print("被试数量：", len(subjects))
 
@@ -525,12 +572,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 resample_freq=args.resample_freq,
                 epoch_seconds=args.epoch_seconds,
                 clip_uv=args.clip_uv,
+                dual2_channels=dual2_channels,
             )
             success_count += 1
         except Exception as exc:
             print("\n❌ 处理失败：", item)
             print("错误原因：", exc)
-            print("提示：如果 all32 找不到 32 个通道，先试试 --mode portable6；如果路径报错，把 EDF/TXT 放到 data 文件夹。")
+            print("提示：如果 all32 找不到 32 个通道，先试试 --mode dual2；如果路径报错，把 EDF/TXT 放到 data 文件夹。")
 
     print("\n" + "=" * 90)
     print(f"特征提取结束：成功 {success_count}/{len(subjects)} 个被试")

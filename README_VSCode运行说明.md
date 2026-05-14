@@ -41,10 +41,16 @@ pip install -r requirements.txt
 
 ## 3. 运行第一个脚本：提取特征
 
-先用少导联模式跑通：
+先用双导联模式跑通：
 
 ```bash
-python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode portable6 --max-epochs 120
+python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --max-epochs 120
+```
+
+`dual2` 默认选用 `C3` 和 `O1`。如需自定义两个通道，例如改成 C4 和 O2：
+
+```bash
+python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --dual2-channels C4 O2 --max-epochs 120
 ```
 
 如果你的 EDF 是 32 导或更多，再跑：
@@ -56,7 +62,7 @@ python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1
 `--max-epochs 120` 表示只处理前 120 个 30 秒片段，也就是前 60 分钟。整晚运行可以改成：
 
 ```bash
-python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode portable6 --max-epochs None
+python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --max-epochs None
 ```
 
 ---
@@ -68,7 +74,7 @@ python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1
 运行：
 
 ```bash
-python 01_extract_features_LIGHT_FIR_vscode.py --subjects-file subjects.json --mode portable6 --max-epochs 120
+python 01_extract_features_LIGHT_FIR_vscode.py --subjects-file subjects.json --mode dual2 --max-epochs 120
 ```
 
 ---
@@ -78,7 +84,7 @@ python 01_extract_features_LIGHT_FIR_vscode.py --subjects-file subjects.json --m
 特征提取完成后，运行：
 
 ```bash
-python 02_train_compare_models_vscode.py --mode portable6 --context-mode causal
+python 02_train_compare_models_vscode.py --mode dual2 --context-mode causal
 ```
 
 如果你前面用的是 all32，这里也必须用 all32：
@@ -92,7 +98,7 @@ python 02_train_compare_models_vscode.py --mode all32 --context-mode causal
 如果想复现原来离线代码的“上一段 + 当前段 + 下一段”，可以运行：
 
 ```bash
-python 02_train_compare_models_vscode.py --mode portable6 --context-mode centered
+python 02_train_compare_models_vscode.py --mode dual2 --context-mode centered
 ```
 
 ---
@@ -124,14 +130,14 @@ saved_models/*.joblib
 
 把数据文件放到 `data` 文件夹，并确认命令里的文件名完全一致。
 
-### 问题二：portable6 找不到 6 个通道
+### 问题二：dual2 找不到指定的两个通道
 
-说明你的 EDF 通道名可能不是 F3、C3、O1、F4、C4、O2。可以打开报错信息看实际通道名，然后在 01 脚本顶部修改 `PORTABLE_6_CHANNELS`。
+说明你的 EDF 通道名可能不是 `C3` / `O1`。可以打开报错信息看实际通道名，然后用 `--dual2-channels` 指定实际存在的两个通道，例如 `--dual2-channels C4 O2`。
 
 ### 问题三：all32 找不到 32 个通道
 
-先用 `--mode portable6` 跑通流程。all32 只适合多导 EEG 数据。
+先用 `--mode dual2` 跑通流程。all32 只适合多导 EEG 数据。
 
 ### 问题四：训练脚本找不到特征文件
 
-检查 01 和 02 的 `--mode` 是否一致。比如 01 用 portable6，02 也必须用 portable6。
+检查 01 和 02 的 `--mode` 是否一致。比如 01 用 dual2，02 也必须用 dual2。
