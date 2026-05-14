@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "01 提取特征 portable6",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/01_extract_features_LIGHT_FIR_vscode.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--subject-id", "day1",
+        "--edf", "data/day1.edf",
+        "--label", "data/day1.txt",
+        "--mode", "portable6",
+        "--max-epochs", "120"
+      ]
+    },
+    {
+      "name": "02 训练模型 portable6 实时上下文",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/02_train_compare_models_vscode.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--mode", "portable6",
+        "--context-mode", "causal"
+      ]
+    }
+  ]
+}

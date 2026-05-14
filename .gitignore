@@ -1,0 +1,28 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 原始大数据
+data/*.edf
+data/*.EDF
+*.edf
+*.EDF
+
+# 特征大文件
+features/*.npy
+
+# 模型大文件
+results/saved_models/*.joblib
+
+# 实时采集原始流
+raw_stream/
+logs/
+
+# 系统文件
+.DS_Store
+Thumbs.db
