@@ -8,21 +8,28 @@
 
 它会读取 features/*_y.npy，基于真实分期标签计算每个被试的睡眠质量指标和 0-100 分评分。
 如果你想对模型预测结果评分，可以在 02_train_compare_models_vscode.py 运行后查看
-results/sleep_quality_from_global_model_predictions.csv。
+results/sleep_quality_from_global_model_predictions_<mode>_<context>.csv。
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
-from sleep_quality_score import compute_sleep_quality, result_to_dict
-
 PROJECT_ROOT = Path(__file__).resolve().parent
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from sleep_quality_score import compute_sleep_quality, result_to_dict
 
 
 def resolve_path(path_like: str | Path) -> Path:

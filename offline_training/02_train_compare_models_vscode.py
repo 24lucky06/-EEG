@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -49,23 +50,28 @@ from sklearn.metrics import (
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-from sleep_quality_score import compute_sleep_quality, result_to_dict, stage_sequence_to_names
-
 PROJECT_ROOT = Path(__file__).resolve().parent
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-CONFIG: Dict[str, Any] = {
-    "FEATURE_DIR": "features",
-    "RESULT_DIR": "results",
-    "MODEL_DIR": "saved_models",
-    "CHANNEL_MODE": "dual2",
-    "WITHIN_TRAIN_RATIO": 0.7,
-    "CALIBRATION_RATIO": 0.2,
-    "STAGE_NAMES": ["W", "N1", "N2", "N3", "REM"],
-    # causal = 前两段 + 当前段，适合实时；centered = 上一段 + 当前段 + 下一段，适合离线分析。
-    "CONTEXT_MODE": "causal",
-    "EPOCH_SECONDS": 30,
-}
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT.parent))
+from sleep_quality_score import compute_sleep_quality, result_to_dict, stage_sequence_to_names
+from config.settings import (
+    CALIBRATION_RATIO,
+    CHANNEL_MODE,
+    CONTEXT_MODE,
+    EPOCH_SECONDS,
+    FEATURE_DIR,
+    MODEL_DIR,
+    RESULT_DIR,
+    STAGE_NAMES,
+    WITHIN_TRAIN_RATIO,
+)
 
 
 def resolve_path(path_like: str | Path) -> Path:
@@ -408,6 +414,7 @@ def run_personal_calibration(
                     "feature_names": feature_names,
                     "extended_feature_names": extended_feature_names,
                     "raw_feature_dim": int(raw_dim),
+                    "preprocessing": test_item.get("meta", {}).get("preprocessing", {}),
                 },
                 model_dir / f"{title}.joblib",
             )
@@ -493,6 +500,7 @@ def save_global_model_and_prediction_quality(
         "epoch_seconds": epoch_seconds,
         "channels": first_meta.get("channels"),
         "n_channels": first_meta.get("n_channels"),
+        "preprocessing": first_meta.get("preprocessing", {}),
         "note": "dual2 + causal 模型适合后续双导联硬件实时系统；all32 模型仅适合离线研究，不能直接用于双导联硬件。",
     }
     joblib.dump(artifact, model_path)
@@ -602,14 +610,14 @@ def run_sleep_quality_from_labels(
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="VSCode 友好版离线睡眠分期模型训练脚本")
-    parser.add_argument("--feature-dir", default=CONFIG["FEATURE_DIR"], help="01 脚本生成的 features 文件夹")
-    parser.add_argument("--result-dir", default=CONFIG["RESULT_DIR"], help="结果输出文件夹")
-    parser.add_argument("--model-dir", default=CONFIG["MODEL_DIR"], help="模型输出文件夹，默认 saved_models")
-    parser.add_argument("--mode", choices=["all32", "dual2"], default=CONFIG["CHANNEL_MODE"], help="通道模式，必须和 01 脚本一致")
-    parser.add_argument("--context-mode", choices=["causal", "centered", "none"], default=CONFIG["CONTEXT_MODE"], help="时序上下文模式")
-    parser.add_argument("--within-train-ratio", type=float, default=CONFIG["WITHIN_TRAIN_RATIO"], help="同被试时间切分训练比例")
-    parser.add_argument("--calibration-ratio", type=float, default=CONFIG["CALIBRATION_RATIO"], help="个体化校准比例")
-    parser.add_argument("--epoch-seconds", type=int, default=CONFIG["EPOCH_SECONDS"], help="每个 epoch 秒数")
+    parser.add_argument("--feature-dir", default=str(FEATURE_DIR), help="01 脚本生成的 features 文件夹")
+    parser.add_argument("--result-dir", default=str(RESULT_DIR), help="结果输出文件夹")
+    parser.add_argument("--model-dir", default=str(MODEL_DIR), help="模型输出文件夹，默认 saved_models")
+    parser.add_argument("--mode", choices=["all32", "dual2"], default=CHANNEL_MODE, help="通道模式，必须和 01 脚本一致")
+    parser.add_argument("--context-mode", choices=["causal", "centered", "none"], default=CONTEXT_MODE, help="时序上下文模式")
+    parser.add_argument("--within-train-ratio", type=float, default=WITHIN_TRAIN_RATIO, help="同被试时间切分训练比例")
+    parser.add_argument("--calibration-ratio", type=float, default=CALIBRATION_RATIO, help="个体化校准比例")
+    parser.add_argument("--epoch-seconds", type=int, default=EPOCH_SECONDS, help="每个 epoch 秒数")
     parser.add_argument("--skip-within", action="store_true", help="跳过同被试时间切分")
     parser.add_argument("--skip-loso", action="store_true", help="跳过 LOSO")
     parser.add_argument("--skip-calibration", action="store_true", help="跳过个体化校准")
@@ -651,12 +659,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(
             f"\n❌ 没有找到 {feature_dir}/*_{args.mode}_X.npy。\n"
             "请先运行 01_extract_features_LIGHT_FIR_vscode.py，并确认 --mode 一致。\n"
-            "例如：python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2"
+            "例如：python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf ../data/day1.edf --label ../data/day1.txt --mode dual2"
         )
         return 1
 
     all_rows: List[Dict[str, Any]] = []
-    stage_names = CONFIG["STAGE_NAMES"]
+    stage_names = list(STAGE_NAMES)
 
     if not args.skip_within:
         all_rows.extend(run_within_subject_time_split(subjects, result_dir, args.within_train_ratio, args.context_mode, stage_names))

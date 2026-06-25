@@ -2,75 +2,138 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "01 离线提取特征 dual2",
+      "name": "Probe serial board COM5",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/realtime_system/probe_serial_board.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "args": [
+        "--port",
+        "COM5",
+        "--baud",
+        "230400",
+        "--seconds",
+        "10"
+      ]
+    },
+    {
+      "name": "Realtime system serial COM5",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/realtime_system/desktop_monitor.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "args": [
+        "--source",
+        "serial",
+        "--serial-port",
+        "COM5",
+        "--baud-rate",
+        "230400",
+        "--hardware-sfreq",
+        "250",
+        "--hardware-channel-indices",
+        "1",
+        "0",
+        "--model",
+        "${workspaceFolder}/offline_training/saved_models/sleep_stage_dual2_causal_global.joblib"
+      ]
+    },
+    {
+      "name": "Realtime system simulated",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/realtime_system/desktop_monitor.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "args": [
+        "--source",
+        "simulated"
+      ]
+    },
+    {
+      "name": "Extract dual2 features",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/offline_training/01_extract_features_LIGHT_FIR_vscode.py",
       "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/offline_training",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
       "args": [
-        "--subject-id", "day1",
-        "--edf", "data/day1.edf",
-        "--label", "data/day1.txt",
-        "--mode", "dual2",
-        "--max-epochs", "120"
+        "--subjects-file",
+        "subjects_template.json",
+        "--mode",
+        "dual2",
+        "--max-epochs",
+        "None",
+        "--suppress-eye-artifacts",
+        "--eye-attenuation",
+        "0.75",
+        "--artifact-ptp-uv",
+        "800"
       ]
     },
     {
-      "name": "01 离线提取特征 all32",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/offline_training/01_extract_features_LIGHT_FIR_vscode.py",
-      "console": "integratedTerminal",
-      "args": [
-        "--subject-id", "day1",
-        "--edf", "data/day1.edf",
-        "--label", "data/day1.txt",
-        "--mode", "all32",
-        "--max-epochs", "120"
-      ]
-    },
-    {
-      "name": "02 训练 dual2 实时候选模型",
+      "name": "Train dual2 realtime model",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/offline_training/02_train_compare_models_vscode.py",
       "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/offline_training",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
       "args": [
-        "--mode", "dual2",
-        "--context-mode", "causal"
+        "--mode",
+        "dual2",
+        "--context-mode",
+        "causal"
       ]
     },
     {
-      "name": "02 训练 all32 离线研究模型",
+      "name": "Train all32 offline model",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/offline_training/02_train_compare_models_vscode.py",
       "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/offline_training",
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
       "args": [
-        "--mode", "all32",
-        "--context-mode", "causal"
+        "--mode",
+        "all32",
+        "--context-mode",
+        "causal"
       ]
     },
     {
-      "name": "03 仅计算睡眠质量评分 dual2",
+      "name": "Hardware validation demo",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/offline_training/03_sleep_quality_score.py",
+      "program": "${workspaceFolder}/realtime_system/hardware_validation_demo.py",
       "console": "integratedTerminal",
-      "args": [
-        "--mode", "dual2"
-      ]
-    },
-    {
-      "name": "实时系统模拟运行",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/realtime_system/app.py",
-      "console": "integratedTerminal",
-      "args": [
-        "--model", "${workspaceFolder}/offline_training/saved_models/sleep_stage_dual2_causal_global.joblib",
-        "--demo-epochs", "5"
-      ]
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "MPLBACKEND": "TkAgg"
+      },
+      "args": []
     }
   ]
 }

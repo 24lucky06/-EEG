@@ -1,13 +1,11 @@
-# 离线训练端
-mne
+# Offline training
+mne==1.10.2
 numpy
 pandas
 scipy
+matplotlib
 scikit-learn
 xgboost
 joblib
 
-# 实时 UI 如果后续改 Flask/FastAPI，可再添加：
-# flask
-# fastapi
-# uvicorn
+pyserial

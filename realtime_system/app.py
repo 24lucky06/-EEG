@@ -15,7 +15,15 @@ app.py
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT.parent))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from config.settings import DEFAULT_MODEL_PATH, DUAL2_CHANNELS, EPOCH_SECONDS, SFREQ
 
 from hardware_reader import HardwareConfig, SimulatedEEGReader
 from model_loader import load_sleep_stage_model
@@ -23,15 +31,12 @@ from realtime_feature_extractor import RealtimeFeatureConfig, RealtimeFeatureExt
 from realtime_predictor import RealtimeSleepStagePredictor
 from sleep_quality_realtime import RealtimeSleepQualityTracker
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-DEFAULT_MODEL = PROJECT_ROOT.parent / "offline_training" / "saved_models" / "sleep_stage_dual2_causal_global.joblib"
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="双导联 EEG 实时预测流程示例")
-    parser.add_argument("--model", default=str(DEFAULT_MODEL), help="02 脚本保存的 joblib 模型路径")
-    parser.add_argument("--channels", nargs=2, default=["C3", "O1"], help="双导联通道名，必须和训练模型一致")
-    parser.add_argument("--sfreq", type=float, default=100.0, help="实时采样率")
+    parser.add_argument("--model", default=str(DEFAULT_MODEL_PATH), help="02 脚本保存的 joblib 模型路径")
+    parser.add_argument("--channels", nargs=2, default=list(DUAL2_CHANNELS), help="双导联通道名，必须和训练模型一致")
+    parser.add_argument("--sfreq", type=float, default=SFREQ, help="实时采样率")
     parser.add_argument("--demo-epochs", type=int, default=5, help="模拟运行多少个 epoch")
     return parser.parse_args()
 
@@ -47,7 +52,7 @@ def main() -> int:
         RealtimeFeatureConfig(channel_names=args.channels, sfreq=args.sfreq)
     )
     predictor = RealtimeSleepStagePredictor(artifact)
-    tracker = RealtimeSleepQualityTracker(epoch_seconds=30)
+    tracker = RealtimeSleepQualityTracker(epoch_seconds=EPOCH_SECONDS)
 
     print("实时流程启动。当前使用模拟硬件数据。")
     print(f"加载模型：{args.model}")
