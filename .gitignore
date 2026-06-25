@@ -1,28 +1,39 @@
-# Python 缓存
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# 虚拟环境
+# Virtual environments
 .venv/
 venv/
 env/
 
-# 原始大数据
+# Local IDE settings
+.vscode/settings.json
+
+# Raw EEG data: keep small label txt files, do not upload EDF recordings
 data/*.edf
 data/*.EDF
 *.edf
 *.EDF
 
-# 特征大文件
-features/*.npy
+# Generated training artifacts
+offline_training/features/
+offline_training/results/
+*.npy
+*.npz
 
-# 模型大文件
-results/saved_models/*.joblib
+# Generated report figures and exports
+report_figures_data_validation/
+report_figures_paperstyle_v2/
+system_architecture_color.svg
 
-# 实时采集原始流
+# Runtime output
 raw_stream/
 logs/
+*.log
 
-# 系统文件
+# Archives and OS files
+*.zip
 .DS_Store
 Thumbs.db

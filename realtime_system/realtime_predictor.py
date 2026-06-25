@@ -25,6 +25,9 @@ class RealtimeSleepStagePredictor:
         self.raw_feature_dim = int(artifact["raw_feature_dim"])
         self.history: Deque[np.ndarray] = deque(maxlen=2)
 
+    def reset(self) -> None:
+        self.history.clear()
+
     def _make_context(self, current_scaled: np.ndarray) -> np.ndarray:
         if self.context_mode == "none":
             return current_scaled.reshape(1, -1)

@@ -1,12 +1,52 @@
 [
   {
     "subject_id": "day1",
-    "edf": "data/day1.edf",
-    "label": "data/day1.txt"
+    "edf": "../data/day1.edf",
+    "label": "../data/day1.txt"
   },
   {
-    "subject_id": "day2",
-    "edf": "data/day2.edf",
-    "label": "data/day2.txt"
+    "subject_id": "day3",
+    "edf": "../data/day3.edf",
+    "label": "../data/day3.txt"
+  },
+  {
+    "subject_id": "day5",
+    "edf": "../data/day5.edf",
+    "label": "../data/day5.txt"
+  },
+  {
+    "subject_id": "day6",
+    "edf": "../data/day6.edf",
+    "label": "../data/day6.txt"
+  },
+  {
+    "subject_id": "day7",
+    "edf": "../data/day7.edf",
+    "label": "../data/day7.txt"
+  },
+  {
+    "subject_id": "day8",
+    "edf": "../data/day8.edf",
+    "label": "../data/day8.txt"
+  },
+  {
+    "subject_id": "day9",
+    "edf": "../data/day9.edf",
+    "label": "../data/day9.txt"
+  },
+  {
+    "subject_id": "day10",
+    "edf": "../data/day10.edf",
+    "label": "../data/day10.txt"
+  },
+  {
+    "subject_id": "day11",
+    "edf": "../data/day11.edf",
+    "label": "../data/day11.txt"
+  },
+  {
+    "subject_id": "day12",
+    "edf": "../data/day12.edf",
+    "label": "../data/day12.txt"
   }
 ]

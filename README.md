@@ -1,45 +1,22 @@
-# EEG Sleep Project 重构版
+# EEG Sleep Project
 
-这个版本把项目拆成两端：
+项目分为两部分：
 
 ```text
-offline_training/   离线算法训练端
-realtime_system/    硬件采集 + 实时预测 + UI 原型端
+offline_training/   离线特征提取、模型训练、结果评估
+realtime_system/    硬件采集、桌面实时监测、实时特征分析
 ```
 
-## 1. 离线训练端 offline_training
+## 离线训练
 
-### 01_extract_features_LIGHT_FIR_vscode.py
-
-作用：读取 EDF + TXT 标签，完成 FIR 滤波、降采样、30 秒切片和特征提取。
-
-双导联示例：
+提取特征示例：
 
 ```bash
 cd offline_training
-python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode dual2 --max-epochs 120
+python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf ../data/day1.edf --label ../data/day1.txt --mode dual2 --max-epochs 120
 ```
 
-32 导联示例：
-
-```bash
-cd offline_training
-python 01_extract_features_LIGHT_FIR_vscode.py --subject-id day1 --edf data/day1.edf --label data/day1.txt --mode all32 --max-epochs 120
-```
-
-输出：
-
-```text
-features/day1_dual2_X.npy
-features/day1_dual2_y.npy
-features/day1_dual2_meta.json
-```
-
-### 02_train_compare_models_vscode.py
-
-作用：训练 W / N1 / N2 / N3 / REM 五分类睡眠分期模型，并输出睡眠质量评分。
-
-双导联实时候选模型：
+训练双导联模型示例：
 
 ```bash
 cd offline_training
@@ -49,46 +26,52 @@ python 02_train_compare_models_vscode.py --mode dual2 --context-mode causal
 输出重点：
 
 ```text
-saved_models/sleep_stage_dual2_causal_global.joblib
-results/model_results_summary.csv
-results/feature_importance_ranking.csv
-results/sleep_quality_from_labels_dual2.csv
-results/sleep_quality_from_global_model_predictions_dual2_causal.csv
+offline_training/saved_models/sleep_stage_dual2_causal_global.joblib
+offline_training/results/model_results_summary.csv
+offline_training/results/feature_importance_ranking.csv
 ```
 
-### 03_sleep_quality_score.py
+## 实时系统
 
-作用：只基于已有 y 标签计算睡眠质量评分。
+桌面实时监测入口：
 
 ```bash
-cd offline_training
-python 03_sleep_quality_score.py --mode dual2
+python realtime_system/desktop_monitor.py --source serial --serial-port COM5
 ```
 
-## 2. 实时系统端 realtime_system
+模拟数据运行：
 
-当前提供的是可跑通流程的骨架：
+```bash
+python realtime_system/desktop_monitor.py --source simulated
+```
+
+相关文件：
 
 ```text
-hardware_reader.py             硬件采集接口占位，目前用模拟 EEG
-realtime_feature_extractor.py  实时特征提取，尽量对齐 01 的特征顺序
+desktop_monitor.py             桌面实时监测界面
+hardware_reader.py             串口硬件读取与模拟数据读取
+realtime_feature_extractor.py  30 秒 epoch 实时特征提取
 model_loader.py                加载 joblib 模型
 realtime_predictor.py          实时分期预测
 sleep_quality_realtime.py      动态睡眠质量评分
-app.py                         命令行模拟运行入口
-ui/                            前端 UI 原型
+app.py                         命令行模拟流程入口
 ```
 
-模拟运行：
+## 一键训练
 
-```bash
-python realtime_system/app.py --model offline_training/saved_models/sleep_stage_dual2_causal_global.joblib --demo-epochs 5
+```powershell
+.\run_training_pipeline.ps1 -Mode dual2 -ContextMode causal -MaxEpochs 120
 ```
 
-## 3. 重要原则
+训练完整数据：
 
-1. all32 模型用于离线研究、特征重要性分析和论文/比赛展示。
-2. dual2 + causal 模型用于双导联硬件实时系统。
-3. 32 导联模型不能直接给双导联硬件用，因为输入维度不同。
-4. 实时特征提取必须和 01 的特征顺序、通道顺序、采样率、epoch 长度保持一致。
-5. 睡眠质量评分当前是基于分期序列的规则评分，不是有 PSQI 标签的监督学习模型。
+```powershell
+.\run_training_pipeline.ps1 -Mode dual2 -ContextMode causal -MaxEpochs None
+```
+
+## 注意
+
+1. `all32` 模型用于离线研究和特征重要性分析。
+2. `dual2 + causal` 模型才适合双导联硬件实时使用。
+3. 实时特征提取必须和离线训练保持通道顺序、采样率、滤波范围和特征顺序一致。
+4. 当前实时展示以桌面端 `desktop_monitor.py` 为准，网页端代码已移除。
